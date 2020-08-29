@@ -1,0 +1,86 @@
+
+<html>
+  <head>
+    <title>LEB 128 encoding and decoding</title>
+    <style>
+    body, input {
+      font-family: monospace;
+    }
+    </style>
+  </head>
+  <body>
+    <h1>
+      <a href="https://en.wikipedia.org/wiki/LEB128">LEB 128 encoding and decoding</a>
+    </h1>
+
+    <div>
+      <label for="signed-encoded">Signed encoded</label>
+      <input type="text" id="signed-encoded" placeholder="[0x80,0x01]"></input>
+    </div>
+    <div>
+      <label for="signed-decoded">Signed decoded</label>
+      <input type="text" id="signed-decoded" placeholder="123"></input>
+    </div>
+
+    <script type="text/javascript">
+    // From https://en.wikipedia.org/wiki/LEB128#JavaScript_Code.
+    const encodeSignedLeb128FromInt32 = (value) => {
+      value |= 0;
+      const result = [];
+      while (true) {
+        const byte = value & 0x7f;
+        value >>= 7;
+        if (
+          (value === 0 && (byte & 0x40) === 0) ||
+          (value === -1 && (byte & 0x40) !== 0)
+        ) {
+          result.push(byte);
+          return result;
+        }
+        result.push(byte | 0x80);
+      }
+    };
+
+    const decodeSignedLeb128 = (input) => {
+      let result = 0;
+      let shift = 0;
+      while (true) {
+        const byte = input.shift();
+        result |= (byte & 0x7f) << shift;
+        shift += 7;
+        if ((0x80 & byte) === 0) {
+          if (shift < 32 && (byte & 0x40) !== 0) {
+            return result | (~0 << shift);
+          }
+          return result;
+        }
+      }
+    };
+
+    function toHexString(n) {
+      return "0x" + n.toString(16).padStart(2, '0');
+    }
+
+    const signedEncoded = document.getElementById('signed-encoded');
+    const signedDecoded = document.getElementById('signed-decoded');
+
+    signedEncoded.addEventListener("input", e => {
+      try {
+        let encoded = eval(e.target.value);
+        let decoded = decodeSignedLeb128(encoded);
+        signedDecoded.value = decoded;
+      } catch (e) {
+        return;
+      }
+    });
+
+    signedDecoded.addEventListener("input", e => {
+      let decoded = e.target.value;
+      let encoded = encodeSignedLeb128FromInt32(decoded);
+      let hexs = encoded.map(toHexString);
+      signedEncoded.value = `[${hexs}]`;
+    });
+
+    </script>
+  </body>
+</html>
